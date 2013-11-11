@@ -11,6 +11,7 @@ STREAM_READ_CALLBACK EncodedStream::m_g_real_handler_ext = NULL;
 EncodedStream::EncodedStream(int id){
 	m_channel_id = -1;
 	m_yuv_buf = NULL;
+	m_encoder = NULL;
 	if (!m_g_dsp_opened){
 		openDSP();
 	}
@@ -19,15 +20,18 @@ EncodedStream::EncodedStream(int id){
 		m_channel_handle = ChannelOpen(m_channel_id);		
 		m_g_count++;
 		m_g_channel_map[m_channel_id] = this;
+		m_encoder = new Encoder(WIDTH, HEIGHT, FPS);
 	}
 }
 EncodedStream::~EncodedStream(){
 	ChannelClose(m_channel_handle);
 	m_g_count--;
 	m_g_channel_map.erase(m_channel_id);
-	if (m_yuv_buf != NULL)
-	{
+	if (m_yuv_buf != NULL){
 		delete[] m_yuv_buf;
+	}
+	if (m_encoder != NULL){
+		delete m_encoder;
 	}
 	if (m_g_count == 0){
 		closeDSP();
@@ -56,7 +60,7 @@ void EncodedStream::start(){
 			SetEncoderPictureFormat(m_channel_handle, ENC_DCIF_FORMAT);
 			SetStreamType(m_channel_handle, STREAM_TYPE_VIDEO);
 			SetDefaultQuant(m_channel_handle, 18, 18, 23);//use the default, the less the better (range:12-30)
-			SetIBPMode(m_channel_handle, 100, 2, 0, 25);//the last is framerate
+			SetIBPMode(m_channel_handle, 100, 2, 0, FPS);//the last is framerate
 			SetupBitrateControl(m_channel_handle, 2000000);//unit:bps
 			SetBitrateControlMode(m_channel_handle, brCBR);//use cbr, or brVBR
 			StartVideoCapture(m_channel_handle);

@@ -16,7 +16,7 @@ void resetTimestamp(){
 int getTimestamp(){
 	return static_cast<int>(timestamp);
 }
-void writeStream(int channel_id, char* buf, unsigned int len, int timestamp){
+void writeStream(int channel_id, unsigned char* buf, unsigned int len, int timestamp){
 	static FILE * h264_file;
 	char name[FILE_NAME_MAX_LEN];
 	sprintf(name, "channel%d_%d.264", channel_id, getTimestamp());
@@ -25,7 +25,7 @@ void writeStream(int channel_id, char* buf, unsigned int len, int timestamp){
 	fwrite(buf, 1, len, h264_file);
 	fclose(h264_file);
 }
-void writeYUV(int channel_id, char* buf, unsigned int len, int timestamp){
+void writeYUV(int channel_id, unsigned char* buf, unsigned int len, int timestamp){
 	static FILE * yuv_file;
 	char name[FILE_NAME_MAX_LEN];
 	sprintf(name, "channel%d_%d.yuv", channel_id, getTimestamp());
@@ -53,7 +53,7 @@ int streamHandlerExt(ULONG channel_id, void* context){
 	++count;
 	printf("%d handler now!", count);
 	DWORD len = 1024*1024;
-	char* buf = (char*)malloc(len);
+	unsigned char* buf = (unsigned char*)malloc(len);
 	int frame_type = 1;
 	int ret;
 	//CaptureIFrame(EncodedStream::getStream(channel_id)->getHandle());
@@ -89,10 +89,19 @@ void oriStreamHandler(UINT channel_id, void* context){
 	static int count = 0;
 	assert(count == 0);
 	++count;
+	printf("writing to yuv...");
 	writeYUV(channel_id, 
-		(char*)EncodedStream::getStream(channel_id)->getYuvBuf(),
+		EncodedStream::getStream(channel_id)->getYuvBuf(),
 		EncodedStream::getStream(channel_id)->getYuvBufSize(),
 		getTimestamp());
+	printf("encoding...");
+	EncodedStream::getStream(channel_id)->getEncoder()->encode(EncodedStream::getStream(channel_id)->getYuvBuf());
+	x264_nal_t* nal = EncodedStream::getStream(channel_id)->getEncoder()->getNal();
+	printf("wring stream...");
+	for (x264_nal_t* cur = nal; cur < nal + EncodedStream::getStream(channel_id)->getEncoder()->getNNal(); cur++){
+		writeStream(channel_id, cur->p_payload, cur->i_payload, getTimestamp());
+	}
+	printf("\n");
 	--count;
 }
 
@@ -103,7 +112,9 @@ int main(int argc, char** argv){
 	//EncodedStream::setHandlerExt(streamHandlerExt);
 	EncodedStream stream(3);
 	stream.start();
+	printf("start capture\n");
 	getchar();
+	printf("stop capture\n");
 	stream.stop();
 	return 0;
 }

@@ -4,9 +4,10 @@
 #include <Windows.h>
 #include <cassert>
 #include <map>
-
+#include "Encoder.h"
 #define WIDTH 704
 #define HEIGHT 576
+#define FPS	25
 
 class EncodedStream{
 public:
@@ -65,11 +66,16 @@ public:
 	unsigned int getYuvBufSize(){
 		return m_yuv_buf_size;
 	}
+
+	Encoder* getEncoder(){
+		return m_encoder;
+	}
 private:
 	HANDLE m_channel_handle;
 	int m_channel_id;
 	unsigned char* m_yuv_buf;
 	unsigned int m_yuv_buf_size;
+	Encoder *m_encoder;
 
 	static bool m_g_dsp_opened;
 	static int m_g_count;

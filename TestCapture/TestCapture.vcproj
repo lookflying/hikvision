@@ -176,6 +176,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Encoder.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\main.cpp"
 				>
 			</File>
@@ -194,7 +198,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Encoder.h"
+				>
+			</File>
+			<File
 				RelativePath=".\HikVisionSdk.h"
+				>
+			</File>
+			<File
+				RelativePath=".\stdint.h"
+				>
+			</File>
+			<File
+				RelativePath=".\x264.h"
+				>
+			</File>
+			<File
+				RelativePath=".\x264_config.h"
 				>
 			</File>
 		</Filter>
@@ -210,6 +230,14 @@
 		</File>
 		<File
 			RelativePath=".\DS40xxSDK.lib"
+			>
+		</File>
+		<File
+			RelativePath=".\libx264-128.dll"
+			>
+		</File>
+		<File
+			RelativePath=".\libx264-128.lib"
 			>
 		</File>
 	</Files>
