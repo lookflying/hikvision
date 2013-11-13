@@ -214,10 +214,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\osdep.h"
-				>
-			</File>
-			<File
 				RelativePath=".\rtmp.h"
 				>
 			</File>
