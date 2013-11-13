@@ -70,6 +70,8 @@ public:
 	Encoder* getEncoder(){
 		return m_encoder;
 	}
+
+
 private:
 	HANDLE m_channel_handle;
 	int m_channel_id;

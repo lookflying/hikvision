@@ -3,7 +3,7 @@
 #include <time.h>
 #include <Windows.h>
 #include "EncodedStream.h"
-#include "RtmpStreamer.h"
+#include "RtmpPublisher.h"
 #define MAX_CHANNELS 64
 HANDLE ChannelHandle[MAX_CHANNELS];
 #define WIDTH 704
@@ -11,7 +11,7 @@ HANDLE ChannelHandle[MAX_CHANNELS];
 #define FILE_NAME_MAX_LEN	256
 
 time_t timestamp = time(0);
-RtmpStreamer* rtmp_streamer;
+RtmpPublisher* rtmp_publisher;
 void resetTimestamp(){
 	timestamp = time(0);
 }
@@ -21,8 +21,8 @@ int getTimestamp(){
 void writeStream(int channel_id, unsigned char* buf, unsigned int len, int timestamp){
 	static FILE * h264_file;
 	char name[FILE_NAME_MAX_LEN];
-	sprintf(name, "channel%d_%d.264", channel_id, getTimestamp());
-	h264_file = fopen(name, "ab");
+	sprintf_s(name, "channel%d_%d.264", channel_id, getTimestamp());
+	fopen_s(&h264_file, name, "ab");
 	assert(h264_file != NULL);
 	fwrite(buf, 1, len, h264_file);
 	fclose(h264_file);
@@ -30,8 +30,8 @@ void writeStream(int channel_id, unsigned char* buf, unsigned int len, int times
 void writeYUV(int channel_id, unsigned char* buf, unsigned int len, int timestamp){
 	static FILE * yuv_file;
 	char name[FILE_NAME_MAX_LEN];
-	sprintf(name, "channel%d_%d.yuv", channel_id, getTimestamp());
-	yuv_file = fopen(name, "ab");
+	sprintf_s(name, "channel%d_%d.yuv", channel_id, getTimestamp());
+	fopen_s(&yuv_file, name, "ab");
 	assert(yuv_file != NULL);
 	fwrite(buf, 1, len, yuv_file);
 	fclose(yuv_file);
@@ -92,29 +92,43 @@ void oriStreamHandler(UINT channel_id, void* context){
 	assert(count == 0);
 	++count;
 	printf("writing to yuv...");
-	writeYUV(channel_id, 
-		EncodedStream::getStream(channel_id)->getYuvBuf(),
-		EncodedStream::getStream(channel_id)->getYuvBufSize(),
-		getTimestamp());
+	//writeYUV(channel_id, 
+	//	EncodedStream::getStream(channel_id)->getYuvBuf(),
+	//	EncodedStream::getStream(channel_id)->getYuvBufSize(),
+	//	getTimestamp());
 	printf("encoding...");
 	EncodedStream::getStream(channel_id)->getEncoder()->encode(EncodedStream::getStream(channel_id)->getYuvBuf());
 	x264_nal_t* nal = EncodedStream::getStream(channel_id)->getEncoder()->getNal();
 	printf("wring stream...");
+	unsigned int len = 0;
 	for (x264_nal_t* cur = nal; cur < nal + EncodedStream::getStream(channel_id)->getEncoder()->getNNal(); cur++){
-
+		len += cur->i_payload;
 		writeStream(channel_id, cur->p_payload, cur->i_payload, getTimestamp());
+		//rtmp_publisher->send(cur->p_payload, cur->i_payload, RTMP_PACKET_TYPE_VIDEO, EncodedStream::getStream(channel_id)->getTimeStamp());
 	}
+	printf("sending stream...");
+	rtmp_publisher->sendFrame(EncodedStream::getStream(channel_id)->getEncoder());
 	printf("\n");
+
+	
 	--count;
 }
 
 int main(int argc, char** argv){
 	resetTimestamp();
-	rtmp_streamer = new RtmpStreamer("rtmp://127.0.0.1/oflaDemo/test");
+	RtmpPublisher publisher("rtmp://127.0.0.1/oflaDemo/test");
+	rtmp_publisher = &publisher;
 	EncodedStream::setOriHandler(oriStreamHandler);
 	//EncodedStream::setHandler(streamHandler);
 	//EncodedStream::setHandlerExt(streamHandlerExt);
 	EncodedStream stream(3);
+	rtmp_publisher->prepare(EncodedStream::getStream(3)->getEncoder(), EncodedStream::getStream(3)->getEncoder()->getParam());
+	//x264_nal_t* nal = EncodedStream::getStream(3)->getEncoder()->getNal();
+	//unsigned int len = 0;
+	//for (x264_nal_t* cur = nal; cur < nal + EncodedStream::getStream(3)->getEncoder()->getNNal(); cur++){
+	//	writeStream(3, cur->p_payload, cur->i_payload, getTimestamp());
+	//	//rtmp_publisher->send(cur->p_payload, cur->i_payload, RTMP_PACKET_TYPE_VIDEO, EncodedStream::getStream(channel_id)->getTimeStamp());
+	//}
 	stream.start();
 	printf("start capture\n");
 	getchar();

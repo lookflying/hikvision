@@ -184,7 +184,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\RtmpStreamer.cpp"
+				RelativePath=".\RtmpPublisher.cpp"
 				>
 			</File>
 		</Filter>
@@ -214,11 +214,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\osdep.h"
+				>
+			</File>
+			<File
 				RelativePath=".\rtmp.h"
 				>
 			</File>
 			<File
-				RelativePath=".\RtmpStreamer.h"
+				RelativePath=".\RtmpPublisher.h"
 				>
 			</File>
 			<File
