@@ -183,12 +183,20 @@
 				RelativePath=".\main.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\RtmpStreamer.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Í·ÎÄ¼þ"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\amf.h"
+				>
+			</File>
 			<File
 				RelativePath=".\DataType.h"
 				>
@@ -203,6 +211,14 @@
 			</File>
 			<File
 				RelativePath=".\HikVisionSdk.h"
+				>
+			</File>
+			<File
+				RelativePath=".\rtmp.h"
+				>
+			</File>
+			<File
+				RelativePath=".\RtmpStreamer.h"
 				>
 			</File>
 			<File
@@ -233,11 +249,27 @@
 			>
 		</File>
 		<File
+			RelativePath=".\libeay32.dll"
+			>
+		</File>
+		<File
+			RelativePath=".\librtmp.lib"
+			>
+		</File>
+		<File
 			RelativePath=".\libx264-128.dll"
 			>
 		</File>
 		<File
 			RelativePath=".\libx264-128.lib"
+			>
+		</File>
+		<File
+			RelativePath=".\ssleay32.dll"
+			>
+		</File>
+		<File
+			RelativePath=".\zlib1.dll"
 			>
 		</File>
 	</Files>

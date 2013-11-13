@@ -3,6 +3,7 @@
 #include <time.h>
 #include <Windows.h>
 #include "EncodedStream.h"
+#include "RtmpStreamer.h"
 #define MAX_CHANNELS 64
 HANDLE ChannelHandle[MAX_CHANNELS];
 #define WIDTH 704
@@ -10,6 +11,7 @@ HANDLE ChannelHandle[MAX_CHANNELS];
 #define FILE_NAME_MAX_LEN	256
 
 time_t timestamp = time(0);
+RtmpStreamer* rtmp_streamer;
 void resetTimestamp(){
 	timestamp = time(0);
 }
@@ -99,6 +101,7 @@ void oriStreamHandler(UINT channel_id, void* context){
 	x264_nal_t* nal = EncodedStream::getStream(channel_id)->getEncoder()->getNal();
 	printf("wring stream...");
 	for (x264_nal_t* cur = nal; cur < nal + EncodedStream::getStream(channel_id)->getEncoder()->getNNal(); cur++){
+
 		writeStream(channel_id, cur->p_payload, cur->i_payload, getTimestamp());
 	}
 	printf("\n");
@@ -107,6 +110,7 @@ void oriStreamHandler(UINT channel_id, void* context){
 
 int main(int argc, char** argv){
 	resetTimestamp();
+	rtmp_streamer = new RtmpStreamer("rtmp://127.0.0.1/oflaDemo/test");
 	EncodedStream::setOriHandler(oriStreamHandler);
 	//EncodedStream::setHandler(streamHandler);
 	//EncodedStream::setHandlerExt(streamHandlerExt);
@@ -116,6 +120,7 @@ int main(int argc, char** argv){
 	getchar();
 	printf("stop capture\n");
 	stream.stop();
+	Sleep(4);
 	return 0;
 }
 
