@@ -22,7 +22,7 @@ void writeStream(int channel_id, unsigned char* buf, unsigned int len, int times
 	static FILE * h264_file;
 	char name[FILE_NAME_MAX_LEN];
 	sprintf_s(name, "channel%d_%d.264", channel_id, getTimestamp());
-	fopen_s(&h264_file, name, "ab");
+	h264_file = fopen(name, "ab");
 	assert(h264_file != NULL);
 	fwrite(buf, 1, len, h264_file);
 	fclose(h264_file);
@@ -116,12 +116,17 @@ void oriStreamHandler(UINT channel_id, void* context){
 
 int main(int argc, char** argv){
 	resetTimestamp();
-	RtmpPublisher publisher("rtmp://127.0.0.1/oflaDemo/test");
-	rtmp_publisher = &publisher;
+	
 	EncodedStream::setOriHandler(oriStreamHandler);
 	//EncodedStream::setHandler(streamHandler);
 	//EncodedStream::setHandlerExt(streamHandlerExt);
 	EncodedStream stream(3);
+	//RTMP * rtmp = RTMP_Alloc();
+
+	//RtmpPublisher publisher
+	
+	//rtmp_publisher = new RtmpPublisher(rtmp, "rtmp://127.0.0.1/oflaDemo/test");
+	rtmp_publisher = new RtmpPublisher("rtmp://127.0.0.1/oflaDemo/test");
 	rtmp_publisher->prepare(EncodedStream::getStream(3)->getEncoder(), EncodedStream::getStream(3)->getEncoder()->getParam());
 	//x264_nal_t* nal = EncodedStream::getStream(3)->getEncoder()->getNal();
 	//unsigned int len = 0;
@@ -134,7 +139,8 @@ int main(int argc, char** argv){
 	getchar();
 	printf("stop capture\n");
 	stream.stop();
-	Sleep(4);
+	Sleep(10);
+	delete rtmp_publisher;
 	return 0;
 }
 

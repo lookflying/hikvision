@@ -1,7 +1,15 @@
 #ifndef RTMPPUBLISHER_H
 #define RTMPPUBLISHER_H
+
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 #include "rtmp.h"
 #include "x264.h"
+#ifdef __cplusplus
+};
+#endif
 #include "Encoder.h"
 #include <Windows.h>
 #define AMF_BUF_SIZE	(1024*32)
@@ -19,6 +27,7 @@ char * put_amf_double( char *c, double d );
 
 class RtmpPublisher{
 public:
+	RtmpPublisher(RTMP * rtmp, const char* url);
 	RtmpPublisher(const char* url);
 	~RtmpPublisher();
 	void send(const unsigned char* buf, unsigned int len, int type, unsigned int timestamp);
@@ -29,21 +38,22 @@ public:
 		m_last_timestamp = GetTickCount();
 		return  (unsigned int) m_last_timestamp - timestamp;
 	}
-	unsigned char * getAmfBuf(){
-		return m_amf;
-	}
-	unsigned int getAmfLen(){
-		return m_amf_len;
-	}
+	//unsigned char * getAmfBuf(){
+	//	return m_amf;
+	//}
+	//unsigned int getAmfLen(){
+	//	return m_amf_len;
+	//}
 private:
 	static void initSockets();
 	static void cleanupSockets();
 	static int m_g_count;
 	RTMP* m_rtmp;
+	RTMP m_rtmp_real;
 	char* m_url;
-	unsigned char m_amf[AMF_BUF_SIZE];
-	unsigned int m_amf_len;
-	RTMPPacket m_packet;
+	//unsigned char m_amf[AMF_BUF_SIZE];
+	//unsigned int m_amf_len;
+	//RTMPPacket m_packet;
 	
 	unsigned long m_last_timestamp;
 };

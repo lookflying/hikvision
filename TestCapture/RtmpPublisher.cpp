@@ -11,14 +11,6 @@
 
 #pragma comment(lib, "librtmp.lib")
 
-#ifdef __cplusplus
-extern "C"{
-#endif
-#include "x264.h"
-#ifdef __cplusplus
-};
-#endif
-
 int hex2bin(char *str, char **hex)
 {
 	char *ptr;
@@ -94,6 +86,30 @@ char * put_amf_double( char *c, double d )
 
 int RtmpPublisher::m_g_count = 0;
 
+RtmpPublisher::RtmpPublisher(RTMP * rtmp, const char* url){
+	if (m_g_count == 0){
+		initSockets();
+	}
+	int err;
+	unsigned int len = strlen(url);
+	m_url = new char[len + 1];
+	memcpy(m_url, url, len);
+	m_url[len] = (char)0;
+	m_rtmp = rtmp;
+	RTMP_Init(m_rtmp);
+	RTMP_Init(&m_rtmp_real);
+	m_rtmp = &m_rtmp_real;
+
+	err = RTMP_SetupURL(m_rtmp, m_url);
+	assert(err > 0);
+	RTMP_EnableWrite(m_rtmp);
+	err = RTMP_Connect(m_rtmp, NULL);
+	assert(err > 0);
+	err = RTMP_ConnectStream(m_rtmp, 0);
+	assert(err > 0);
+
+	m_g_count++;
+}
 RtmpPublisher::RtmpPublisher(const char* url){
 	if (m_g_count == 0){
 		initSockets();
@@ -155,6 +171,8 @@ void RtmpPublisher::send(const unsigned char *buf, unsigned int len, int type, u
 	pakt.m_headerType = RTMP_PACKET_SIZE_LARGE;
 	pakt.m_nInfoField2 = m_rtmp->m_stream_id;
 	memcpy(pakt.m_body, buf, len);
+
+	assert(RTMP_IsConnected(m_rtmp));
 	RTMP_SendPacket(m_rtmp, &pakt, 0);
 	RTMPPacket_Free(&pakt);
 
@@ -220,15 +238,18 @@ static inline char* put_headers(char* ptr, Encoder* encoder){
 }
 
 void RtmpPublisher::prepare(Encoder * encoder, x264_param_t *param){
-	memset(&m_packet, 0, sizeof(RTMPPacket));
-	m_packet.m_nChannel = 0x04;
-	m_packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
-	m_packet.m_nTimeStamp = 0;
-	m_packet.m_nInfoField2 = m_rtmp->m_stream_id;
-	m_packet.m_hasAbsTimestamp = 0;
-	m_packet.m_body = (char*) m_amf;
-	char* amf_ptr = (char*)m_amf;
-	m_packet.m_packetType = RTMP_PACKET_TYPE_INFO;
+	RTMPPacket packet;
+	char* amf_ptr;
+	unsigned int amf_len;
+	RTMPPacket_Reset(&packet);
+	RTMPPacket_Alloc(&packet, AMF_BUF_SIZE);
+	packet.m_nChannel = 0x04;
+	packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+	packet.m_nTimeStamp = 0;
+	packet.m_nInfoField2 = m_rtmp->m_stream_id;
+	packet.m_hasAbsTimestamp = 0;
+	packet.m_packetType = RTMP_PACKET_TYPE_INFO;
+	amf_ptr = packet.m_body;
 	amf_ptr=put_byte(amf_ptr, AMF_STRING );
 	amf_ptr=put_amf_string(amf_ptr, "@setDataFrame" );
 	amf_ptr=put_byte(amf_ptr, AMF_STRING );
@@ -271,22 +292,34 @@ void RtmpPublisher::prepare(Encoder * encoder, x264_param_t *param){
 	amf_ptr=put_amf_double( amf_ptr, 3 ); 
 	amf_ptr=put_amf_string( amf_ptr, "" );
 	amf_ptr=put_byte( amf_ptr, AMF_OBJECT_END );
-	m_amf_len = (unsigned int)(amf_ptr - (char*)m_amf);
-	m_packet.m_nBodySize = m_amf_len;
-	RTMP_SendPacket(m_rtmp, &m_packet, 1);
+	amf_len = (unsigned int)(amf_ptr - packet.m_body);
+	packet.m_nBodySize = amf_len;
+	assert(RTMP_IsConnected(this->m_rtmp));
+	assert(RTMP_SendPacket(this->m_rtmp, &packet, 0));
+	RTMPPacket_Free(&packet);
 
-	m_packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
-	m_amf[0] = 0x17;
-	m_amf[1] = 0x00;
-	m_amf[2] = 0x00;
-	m_amf[3] = 0x00;
-	m_amf[4] = 0x00;
-	m_amf[5] = 0x01;
-	m_amf[6] = 0x42;
-	m_amf[7] = 0xC0;
-	m_amf[8] = 0x15;
-	m_amf[9] = 0x03;
-	amf_ptr = (char*)m_amf + 10;
+
+	//send sps pps
+	RTMPPacket_Reset(&packet);
+	RTMPPacket_Alloc(&packet, BUF_SIZE);
+	packet.m_nChannel = 0x04;
+	packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+	packet.m_nTimeStamp = 0;
+	packet.m_nInfoField2 = m_rtmp->m_stream_id;
+	packet.m_hasAbsTimestamp = 0;
+	packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
+	amf_ptr = packet.m_body;
+	packet.m_body[0] = (char)0x17;
+	packet.m_body[1] = (char)0x00;
+	packet.m_body[2] = (char)0x00;
+	packet.m_body[3] = (char)0x00;
+	packet.m_body[4] = (char)0x00;
+	packet.m_body[5] = (char)0x01;
+	packet.m_body[6] = (char)0x42;
+	packet.m_body[7] = (char)0xC0;
+	packet.m_body[8] = (char)0x15;
+	packet.m_body[9] = (char)0x03;
+	amf_ptr = packet.m_body + 10;
 
 
 	amf_ptr = put_headers(amf_ptr, encoder);
@@ -304,13 +337,15 @@ void RtmpPublisher::prepare(Encoder * encoder, x264_param_t *param){
 	}
 	printf("\n");
 	}*/
+	amf_len = (unsigned int)(amf_ptr - packet.m_body);
+	packet.m_nBodySize = amf_len;
 
-	m_packet.m_nBodySize = amf_ptr - (char*) m_amf;
 
-	RTMP_SendPacket(m_rtmp, &m_packet, 0);
+ 	assert(RTMP_IsConnected(this->m_rtmp));
+	RTMP_SendPacket(this->m_rtmp, &packet, 0);
 
 	m_last_timestamp = GetTickCount();
-
+	RTMPPacket_Free(&packet);
 }	
 
 static inline int nal_start_pos(unsigned char * buf){
@@ -331,10 +366,11 @@ static inline int nal_start_pos(unsigned char * buf){
 }
 
 void RtmpPublisher::sendFrame(Encoder *encoder){
+	RTMPPacket packet;
 	x264_nal_t* nal = encoder->getNal();
 	int nnal = encoder->getNNal();
 	int total_len = 0;
-	unsigned char* buf_ptr;
+	char* ptr;
 	int* start_pos = new int[nnal];
 	for (int i = 0; i < nnal; ++i){
 		x264_nal_t *cur = nal + i;
@@ -342,9 +378,19 @@ void RtmpPublisher::sendFrame(Encoder *encoder){
 		total_len += (cur->i_payload - start_pos[i] + 4);//4 bytes for size
 	}
 	total_len += 5;
-	buf_ptr = new unsigned char[total_len];
-	char* ptr = (char*)buf_ptr;
-	ptr[0] = 0x17;//17i frame, 27 p frame
+	RTMPPacket_Reset(&packet);
+	RTMPPacket_Alloc(&packet, total_len);
+	packet.m_nChannel = 0x04;
+	packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+	packet.m_nInfoField2 = m_rtmp->m_stream_id;
+	packet.m_hasAbsTimestamp = 0;
+	packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
+	ptr = packet.m_body;
+	if (nnal == 1){
+		ptr[0] = 0x27;
+	}else{
+		ptr[0] = 0x17;//0x17 i frame, 0x27 p frame
+	}
 	ptr[1] = 0x01;// AVC NALU
 	ptr[2] = 0x00;
 	ptr[3] = 0x00;
@@ -353,17 +399,16 @@ void RtmpPublisher::sendFrame(Encoder *encoder){
 	for (int i = 0; i < nnal; ++i){
 		x264_nal_t *cur = nal + i;
 		ptr = put_be32(ptr, cur->i_payload - start_pos[i]);
-		memcpy(buf_ptr, cur->p_payload + start_pos[i], cur->i_payload - start_pos[i]);
+		memcpy(ptr, cur->p_payload + start_pos[i], cur->i_payload - start_pos[i]);
 		ptr += (cur->i_payload - start_pos[i]);
 	}
-	m_packet.m_body = (char*)buf_ptr;
-	m_packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
-	m_packet.m_nBodySize = (unsigned int)total_len;
-	m_packet.m_nTimeStamp = getTimestamp();
-	RTMP_SendPacket(m_rtmp, &m_packet, 0);
-	delete[] buf_ptr;
-	delete[] start_pos;
+	packet.m_nBodySize = (unsigned int)total_len;
+	packet.m_nTimeStamp = getTimestamp();
 
+	assert(RTMP_IsConnected(m_rtmp));
+	RTMP_SendPacket(m_rtmp, &packet, 0);
+	delete[] start_pos;
+	RTMPPacket_Free(&packet);
 
 
 }
