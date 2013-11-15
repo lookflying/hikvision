@@ -1,4 +1,5 @@
 #include "EncodedStream.h"
+#include <ctime>
 
 
 bool EncodedStream::m_g_dsp_opened = false;
@@ -12,6 +13,7 @@ EncodedStream::EncodedStream(int id){
 	m_channel_id = -1;
 	m_yuv_buf = NULL;
 	m_encoder = NULL;
+	m_stream_writer = NULL;
 	if (!m_g_dsp_opened){
 		openDSP();
 	}
@@ -20,7 +22,8 @@ EncodedStream::EncodedStream(int id){
 		m_channel_handle = ChannelOpen(m_channel_id);		
 		m_g_count++;
 		m_g_channel_map[m_channel_id] = this;
-		m_encoder = new Encoder(WIDTH, HEIGHT, FPS);
+		m_encoder = new Encoder(WIDTH, HEIGHT, FPS, 4);
+		m_stream_writer = new StreamWriter(m_channel_id, time(0));
 	}
 }
 EncodedStream::~EncodedStream(){
@@ -33,9 +36,13 @@ EncodedStream::~EncodedStream(){
 	if (m_encoder != NULL){
 		delete m_encoder;
 	}
+	if (m_stream_writer != NULL){
+		delete m_stream_writer;
+	}
 	if (m_g_count == 0){
 		closeDSP();
 	}
+	
 }
 
 void EncodedStream::openDSP(){

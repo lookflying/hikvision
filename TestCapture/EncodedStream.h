@@ -5,6 +5,7 @@
 #include <cassert>
 #include <map>
 #include "Encoder.h"
+#include "StreamWriter.h"
 #define WIDTH 704
 #define HEIGHT 576
 #define FPS	25
@@ -13,7 +14,7 @@ class EncodedStream{
 public:
 	EncodedStream(int id);
 	~EncodedStream();
-	
+
 	static void interOriHandler(UINT channel_id, void* context){
 		if (m_g_real_ori_handler != NULL){
 			m_g_real_ori_handler(channel_id, context);
@@ -71,6 +72,30 @@ public:
 		return m_encoder;
 	}
 
+	void write264(unsigned char* buf, unsigned int len){
+		if (m_stream_writer != NULL){
+			m_stream_writer->write264(buf, len);
+		}
+	}
+
+	void writeYuv(unsigned char* buf, unsigned int len){
+		if (m_stream_writer != NULL){
+			m_stream_writer->writeYuv(buf, len);
+		}
+	}
+
+	void writePipe264(unsigned char *buf, unsigned int len){
+		if (m_stream_writer != NULL){
+			m_stream_writer->writePipe264(buf, len);
+		}
+	}
+
+	void writePipeYuv(unsigned char *buf, unsigned int len){
+		if (m_stream_writer != NULL){
+			m_stream_writer->writePipeYuv(buf, len);
+		}
+	}
+
 
 private:
 	HANDLE m_channel_handle;
@@ -78,6 +103,7 @@ private:
 	unsigned char* m_yuv_buf;
 	unsigned int m_yuv_buf_size;
 	Encoder *m_encoder;
+	StreamWriter *m_stream_writer;
 
 	static bool m_g_dsp_opened;
 	static int m_g_count;

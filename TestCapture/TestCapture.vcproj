@@ -226,6 +226,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\StreamWriter.h"
+				>
+			</File>
+			<File
 				RelativePath=".\x264.h"
 				>
 			</File>
